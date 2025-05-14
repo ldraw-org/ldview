@@ -495,8 +495,11 @@ time_t LDLModel::getLocalTimestamp(const std::string& lfilename)
 	}
 	if (localTimestamp == 0)
 	{
-		std::string base;
-		combinePath(lDrawDir(), "Unofficial", base);
+		std::string base = unofficialDir();
+		if (base.empty())
+		{
+			return localTimestamp;
+		}
 		std::string path;
 		combinePath(base, lfilename, path);
 		localTimestamp = getFileTimestamp(path);
@@ -888,29 +891,36 @@ bool LDLModel::initializeNewSubModel(
 // NOTE: static function.
 bool LDLModel::verifyLDrawDir(const char *value)
 {
-	char currentDir[1024];
-	bool retValue = false;
-
-	if (value && getcwd(currentDir, sizeof(currentDir)))
+	if (strlen(value) > 0)
 	{
-		if (chdir(value) == 0)
+		char currentDir[1024];
+		bool retValue = false;
+
+		if (value && getcwd(currentDir, sizeof(currentDir)))
 		{
-			if (!sm_verifyLDrawSubDirs || (chdir("parts") == 0 && chdir("..") == 0 && chdir("p") == 0))
+			if (chdir(value) == 0)
 			{
-				retValue = true;
+				if (!sm_verifyLDrawSubDirs || (chdir("parts") == 0 && chdir("..") == 0 && chdir("p") == 0))
+				{
+					retValue = true;
+				}
+			}
+			if (chdir(currentDir) != 0)
+			{
+				debugPrintf("Error going back to original directory.\n");
+				debugPrintf("currentDir before: <%s>\n", currentDir);
+				if (getcwd(currentDir, sizeof(currentDir)) != NULL)
+				{
+					debugPrintf("currentDir  after: <%s>\n", currentDir);
+				}
 			}
 		}
-		if (chdir(currentDir) != 0)
-		{
-			debugPrintf("Error going back to original directory.\n");
-			debugPrintf("currentDir before: <%s>\n", currentDir);
-			if (getcwd(currentDir, sizeof(currentDir)) != NULL)
-			{
-				debugPrintf("currentDir  after: <%s>\n", currentDir);
-			}
-		}
+		return retValue;
 	}
-	return retValue;
+	else
+	{
+		return checkLDrawZipPath(sm_ldrawZipPath.c_str());
+	}
 }
 
 // NOTE: static function.
@@ -1190,6 +1200,23 @@ const char* LDLModel::lDrawDir(bool defaultValue /*= false*/)
 	{
 		return sm_systemLDrawDir;
 	}
+}
+
+// NOTE: static function.
+std::string LDLModel::unofficialDir(void)
+{
+	std::string dir(lDrawDir());
+	if (dir.empty() && !sm_ldrawZipPath.empty())
+	{
+		dir = directoryFromPath(sm_ldrawZipPath.c_str());
+	}
+	if (dir.empty())
+	{
+		return dir;
+	}
+	std::string result;
+	combinePath(dir.c_str(), "Unofficial", result);
+	return result;
 }
 
 void LDLModel::readComment(LDLCommentLine *commentLine)
