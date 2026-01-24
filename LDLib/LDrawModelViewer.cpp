@@ -476,7 +476,7 @@ TCFloat LDrawModelViewer::getClipRadius(void)
 
 	if (flags.autoCenter)
 	{
-		clipRadius = clipSize / 1.45f;
+		clipRadius = clipSize / 0.95f;
 	}
 	else
 	{
